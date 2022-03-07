@@ -12,10 +12,10 @@ include_directories(${PROJECT_SOURCE_DIR})
 find_package(casadi)
 find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
-#find_package(Matplot++ REQUIRED)
+find_package(Matplot++ REQUIRED)
 
 
 
-add_executable(directTranscription main.cpp RK4multipleshooting.cpp RK4multipleshooting.h)
+add_executable(directTranscription main.cpp RK4multipleshooting.cpp RK4multipleshooting.h Plotter.h Plotter.cpp)
 
-target_link_libraries(directTranscription casadi)
+target_link_libraries(directTranscription casadi Matplot++::matplot)

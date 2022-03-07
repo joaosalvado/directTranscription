@@ -3,6 +3,7 @@
 using namespace casadi;
 
 #include "RK4multipleshooting.h"
+#include "Plotter.h"
 
 int main() {
     // 1 - Problem setup
@@ -12,8 +13,9 @@ int main() {
     int N = 20;
     double L = 0.5;
     casadi::Opti ocp;
-    DM x0 { 1, 1, 0 };
-    DM xf { 2, 5, M_PI/2};
+    DM x0 = DM::vertcat({ 1, 1, 0 });
+    DM xf = DM::vertcat({ 1, 2, M_PI/2});
+    Slice all;
 
     // 1.2 - State: SE2
     struct se2{
@@ -47,12 +49,17 @@ int main() {
     SX l = u->v_ode*u->v_ode + u->w_ode*u->w_ode;
     auto J = Function("l", {x->X_ode(), u->U_ode()}, {l});
 
+    // 1.6 - Bounds on controls
+    double v_bound = 1;
+    double w_bound = 2;
+    DM u_bound = DM::vertcat({v_bound, w_bound});
+    for(int k = 0; k < N; ++k) {
+        ocp.subject_to(u->U(all, k) <= u_bound);
+        ocp.subject_to(u->U(all, k) >= -u_bound);
+    }
     // 2 - Transcription Methods
 
     // 2.0 - Boundary Constraints
-    Slice all;
-    auto a = x->X.size1();
-    auto b = x->X.size2();
     ocp.subject_to( x->X(all, 0 ) - x0 == 0);
     ocp.subject_to( x->X(all, N ) - xf == 0 );
 
@@ -60,7 +67,9 @@ int main() {
     RK4multipleshooting rk4ms = RK4multipleshooting(x->X, u->U, N, T, f, J);
     MX cost = rk4ms.integrated_cost(0, T, N);
 
-    ocp.subject_to(rk4ms.g);
+    for(auto g_i : rk4ms.g){
+        ocp.subject_to(g_i == 0 );
+    }
     ocp.minimize(cost);
 
     // 3 - Solve
@@ -69,10 +78,17 @@ int main() {
     std::string solver{"ipopt"};
     s_opts["print_level"] = 0;
     s_opts["linear_solver"] = "ma27";
-
     ocp.solver(solver, p_opts, s_opts);
 
-    ocp.solve();
+    auto solution = ocp.solve();
+    DM Xsol = solution.value(x->X);
+    DM Usol = solution.value(u->U);
+    std::cout << Xsol << std::endl;
+    std::cout << Usol << std::endl;
 
+    // 4 - Plot Solution
+    Plotter plotter;
+    plotter.plot_path(Xsol(0,all), Xsol(1,all));
+    //plotter.plot_path_heading(Xsol(0,all), Xsol(1,all), Xsol(2, all));
     return 0;
 }
