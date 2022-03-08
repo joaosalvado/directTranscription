@@ -16,6 +16,6 @@ find_package(Matplot++ REQUIRED)
 
 
 
-add_executable(directTranscription main.cpp RK4multipleshooting.cpp RK4multipleshooting.h Plotter.h Plotter.cpp)
+add_executable(directTranscription main.cpp RK4multipleshooting.cpp RK4multipleshooting.h Plotter.h Plotter.cpp LGLms.cpp LGLms.h)
 
 target_link_libraries(directTranscription casadi Matplot++::matplot)
