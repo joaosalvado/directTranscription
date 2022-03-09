@@ -4,14 +4,16 @@ using namespace casadi;
 
 #include "RK4multipleshooting.h"
 #include "LGLms.h"
+#include "CGLms.h"
 #include "Plotter.h"
 
 int main() {
     // 1 - Problem setup
 
     // 1.1 - Params
-    double T = 30;
-    int N = 20;
+    int n =3;
+    double T = 15;
+    int N = 3*T;
     double L = 0.2;
     casadi::Opti ocp;
     DM x0 = DM::vertcat({ 10, 10, 0 });
@@ -69,21 +71,32 @@ int main() {
 
 
     // 2.1 - Direct Local Collocation Multiple-shooting RK4
-//    RK4multipleshooting rk4ms = RK4multipleshooting(x->X, u->U, N, T, f, J);
-//    MX cost = rk4ms.integrated_cost(0, T, N);
-//
-//    for(auto g_i : rk4ms.g){
-//        ocp.subject_to(g_i == 0 );
-//    }
-//    ocp.minimize(cost);
+    RK4multipleshooting rk4ms = RK4multipleshooting(x->X, u->U, N, T, f, J);
+    MX cost = rk4ms.integrated_cost(0, T, N);
+
+    for(auto g_i : rk4ms.g){
+        ocp.subject_to(g_i == 0 );
+    }
+    ocp.minimize(cost);
     // 2.2 - Direct Global Collocation Multiple-shooting LGL
-    LGLms lgl_ms = LGLms(x->X, u->U, N, T, 3, f, J, ocp);
+/*    LGLms lgl_ms = LGLms(x->X, u->U, N, T, n, f, J, ocp);
     MX cost = lgl_ms.integrated_cost(0, T, N);
 
     for(auto g_i : lgl_ms.g){
         ocp.subject_to(g_i == 0 );
     }
+    ocp.minimize(cost);*/
+    // 2.3 - Direct Global Collocation Multiple-shooting CGL
+/*
+    auto cgl_ms = CGLms(x->X, u->U, N, T, n, f, J, ocp);
+    MX cost = cgl_ms.integrated_cost(0, T, N);
+
+    for(auto g_i : cgl_ms.g){
+        ocp.subject_to(g_i == 0 );
+    }
     ocp.minimize(cost);
+*/
+
 
     // 3 - Solve
     Dict p_opts, s_opts;
