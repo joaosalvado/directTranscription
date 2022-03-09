@@ -10,12 +10,12 @@ int main() {
     // 1 - Problem setup
 
     // 1.1 - Params
-    double T = 10;
-    int N = 2;
+    double T = 30;
+    int N = 20;
     double L = 0.2;
     casadi::Opti ocp;
-    DM x0 = DM::vertcat({ 1, 1, 0 });
-    DM xf = DM::vertcat({ 1, 2, M_PI/2});
+    DM x0 = DM::vertcat({ 10, 10, 0 });
+    DM xf = DM::vertcat({ 1, 1, -M_PI/2});
     Slice all;
 
     // 1.2 - State: SE2
@@ -69,14 +69,14 @@ int main() {
 
 
     // 2.1 - Direct Local Collocation Multiple-shooting RK4
-/*    RK4multipleshooting rk4ms = RK4multipleshooting(x->X, u->U, N, T, f, J);
-    MX cost = rk4ms.integrated_cost(0, T, N);
-
-    for(auto g_i : rk4ms.g){
-        ocp.subject_to(g_i == 0 );
-    }
-    ocp.minimize(cost);*/
-   // 2.2 - Direct Global Collocation Multiple-shooting LGL
+//    RK4multipleshooting rk4ms = RK4multipleshooting(x->X, u->U, N, T, f, J);
+//    MX cost = rk4ms.integrated_cost(0, T, N);
+//
+//    for(auto g_i : rk4ms.g){
+//        ocp.subject_to(g_i == 0 );
+//    }
+//    ocp.minimize(cost);
+    // 2.2 - Direct Global Collocation Multiple-shooting LGL
     LGLms lgl_ms = LGLms(x->X, u->U, N, T, 3, f, J, ocp);
     MX cost = lgl_ms.integrated_cost(0, T, N);
 

@@ -8,31 +8,21 @@ void LGLms::generate_constraints() {
     int nx = X.size1();
     double h = T/(N-1);
     J_ = 0;
-    auto a = casadi::collocation_points(3, "legendre");
-    DM C, B, D;
-    casadi::collocation_coeff(a, C,D,B);
-    std::cout << DM({a}) << std::endl;
-    std::cout << std::endl;
-    std::cout << C << std::endl;
-    std::cout << std::endl;
-    std::cout << D << std::endl;
-    std::cout << std::endl;
-    std::cout << B << std::endl;
 
     for (int k = 0; k < N; ++k) {
         // Create collocation states
         auto o = ocp.variable(nx, n);
 
 
-        auto xo = MX::horzcat({  o});
+        auto xo = MX::horzcat({ X(all,k), o});
         MX u = MX::repmat(U(all, k), 1, n+1);
         // Defect constraints
-        auto x_dot_ = f({{xo}, {U(all, k)}});
+        auto x_dot_ = f({{o}, {U(all, k)}});
         auto x_dot = MX::vertcat(x_dot_);
         std::cout << x_dot.size1() << std::endl;
         std::cout << x_dot.size2() << std::endl;
         auto F = 0.5*h  * x_dot ;
-        auto g_d = mtimes(C, transpose(xo)) - transpose(F);
+        auto g_d = mtimes(D(Slice(1,n+1), all), transpose(xo)) - transpose(F);
         std::cout << g_d.size1() << std::endl;
         std::cout << g_d.size2() << std::endl;
         auto h = MX::vec(g_d);
@@ -55,71 +45,55 @@ void LGLms::generate_constraints() {
         std::cout << w.size2() << std::endl;
         J_ += MX::sum2(l_k) ;//0.5* h * mtimes(l_k , w); // quadrature
     }
-    /*for (int k = 0; k < N; ++k) {
-        // Create collocation states
-        auto o = ocp.variable(nx, n);
 
-
-        auto xo = MX::horzcat({ X(all,k), o});
-        MX u = MX::repmat(U(all, k), 1, n+1);
-        // Defect constraints
-        auto x_dot_ = f({{xo}, {U(all, k)}});
-        auto x_dot = MX::vertcat(x_dot_);
-        std::cout << x_dot.size1() << std::endl;
-        std::cout << x_dot.size2() << std::endl;
-        auto F = 0.5*h  * x_dot ;
-        auto g_d = D*xo - transpose(F);
-        std::cout << g_d.size1() << std::endl;
-        std::cout << g_d.size2() << std::endl;
-        auto h = MX::vec(g_d);
-        std::cout << h.size1() << std::endl;
-        std::cout << h.size2() << std::endl;
-        // Shooting gap
-        auto g_s = X(all,k+1) - o(all,n-1);
-
-        g.push_back(g_s);
-        g.push_back(MX::vec(g_d));
-
-
-
-        // Cost
-        auto l_k_ = J({{xo}, {U(all,k)}});
-        auto l_k = MX::vertcat(l_k_);
-        std::cout << l_k.size1() << std::endl;
-        std::cout << l_k.size2() << std::endl;
-        std::cout << w.size1() << std::endl;
-        std::cout << w.size2() << std::endl;
-        J_ += MX::sum2(l_k) ;//0.5* h * mtimes(l_k , w); // quadrature
-    }*/
-    /*for (int k = 0; k < N; ++k) {
-        // Create collocation states
-        auto o = ocp.variable(nx, n);
-        // Shooting gap
-        auto g_s = X(all,k) - o(all,0);
-
-        auto xo = MX::horzcat({ o, X(all,k+1)});
-        //MX u = MX::repmat(U(all, k), 1, n+1);
-        // Defect constraints
-        auto x_dot_ = f({{xo}, {U(all, k)}});
-        auto x_dot = MX::vertcat(x_dot_);
-        std::cout << x_dot.size1() << std::endl;
-        std::cout << x_dot.size2() << std::endl;
-        auto F = 0.5*h  * x_dot ;
-        auto g_d = mtimes(D, transpose(xo)) - transpose(F);
-
-        //g.push_back(g_s);
-        g.push_back(MX::vec(g_d));
-
-        // Cost
-        auto l_k_ = J({{xo}, {U(all,k)}});
-        auto l_k = MX::vertcat(l_k_);
-        std::cout << l_k.size1() << std::endl;
-        std::cout << l_k.size2() << std::endl;
-        std::cout << w.size1() << std::endl;
-        std::cout << w.size2() << std::endl;
-        J_ += 0.5* h * mtimes(l_k , w); // quadrature
-    }*/
 }
+
+
+//void LGLms::generate_constraints() {
+//    int nx = X.size1();
+//    double h = T/((N-2)/3-1);
+//    J_ = 0;
+//
+//    int u_k = 0;
+//    for (int k = 0; k < N-1; k+=n) {
+//
+//        // Create collocation states
+//        auto o = X(all,Slice(k+1, k+n+1));
+//        auto xo = MX::horzcat({ X(all,Slice(k, k+n+1))});
+//        MX u = MX::repmat(U(all, k), 1, n+1);
+//        // Defect constraints
+//        auto x_dot_ = f({{o}, {U(all, u_k)}});
+//        auto x_dot = MX::vertcat(x_dot_);
+//        std::cout << x_dot.size1() << std::endl;
+//        std::cout << x_dot.size2() << std::endl;
+//        auto F = 0.5*h  * x_dot ;
+//        auto g_d = mtimes(D(Slice(1,n+1), all), transpose(xo)) - transpose(F);
+//        std::cout << g_d.size1() << std::endl;
+//        std::cout << g_d.size2() << std::endl;
+//        auto h = MX::vec(g_d);
+//        std::cout << h.size1() << std::endl;
+//        std::cout << h.size2() << std::endl;
+//        // Shooting gap
+//        auto g_s = X(all,k+1) - o(all,n-1);
+//
+//        //g.push_back(g_s);
+//        g.push_back(MX::vec(g_d));
+//
+//
+//
+//        // Cost
+//        auto l_k_ = J({{xo}, {U(all,u_k)}});
+//        auto l_k = MX::vertcat(l_k_);
+//        std::cout << l_k.size1() << std::endl;
+//        std::cout << l_k.size2() << std::endl;
+//        std::cout << w.size1() << std::endl;
+//        std::cout << w.size2() << std::endl;
+//        J_ += MX::sum2(l_k) ;//0.5* h * mtimes(l_k , w); // quadrature
+//
+//        u_k++;
+//    }
+//
+//}
 
 MX LGLms::integrated_cost(MX t0, MX tf, int N) {
     return J_;
@@ -157,3 +131,83 @@ void LGLms::create_LGL_params(int degree){
         this->w = DM({0.0666666666666667, 0.378474956297847, 0.554858377035487, 0.554858377035487, 0.378474956297847, 0.0666666666666667});
     }
 }
+
+
+
+
+//    auto a = casadi::collocation_points(3, "legendre");
+//    DM C, B, D;
+//    casadi::collocation_coeff(a, C,D,B);
+//    std::cout << DM({a}) << std::endl;
+//    std::cout << std::endl;
+//    std::cout << C << std::endl;
+//    std::cout << std::endl;
+//    std::cout << D << std::endl;
+//    std::cout << std::endl;
+//    std::cout << B << std::endl;
+//
+//    for (int k = 0; k < N; ++k) {
+//        // Create collocation states
+//        auto o = ocp.variable(nx, n);
+//
+//
+//        auto xo = MX::horzcat({  o});
+//        MX u = MX::repmat(U(all, k), 1, n+1);
+//        // Defect constraints
+//        auto x_dot_ = f({{xo}, {U(all, k)}});
+//        auto x_dot = MX::vertcat(x_dot_);
+//        std::cout << x_dot.size1() << std::endl;
+//        std::cout << x_dot.size2() << std::endl;
+//        auto F = 0.5*h  * x_dot ;
+//        auto g_d = mtimes(C, transpose(xo)) - transpose(F);
+//        std::cout << g_d.size1() << std::endl;
+//        std::cout << g_d.size2() << std::endl;
+//        auto h = MX::vec(g_d);
+//        std::cout << h.size1() << std::endl;
+//        std::cout << h.size2() << std::endl;
+//        // Shooting gap
+//        auto g_s = X(all,k+1) - o(all,n-1);
+//
+//        g.push_back(g_s);
+//        g.push_back(MX::vec(g_d));
+//
+//
+//
+//        // Cost
+//        auto l_k_ = J({{xo}, {U(all,k)}});
+//        auto l_k = MX::vertcat(l_k_);
+//        std::cout << l_k.size1() << std::endl;
+//        std::cout << l_k.size2() << std::endl;
+//        std::cout << w.size1() << std::endl;
+//        std::cout << w.size2() << std::endl;
+//        J_ += MX::sum2(l_k) ;//0.5* h * mtimes(l_k , w); // quadrature
+//    }
+
+/*for (int k = 0; k < N; ++k) {
+    // Create collocation states
+    auto o = ocp.variable(nx, n);
+    // Shooting gap
+    auto g_s = X(all,k) - o(all,0);
+
+    auto xo = MX::horzcat({ o, X(all,k+1)});
+    //MX u = MX::repmat(U(all, k), 1, n+1);
+    // Defect constraints
+    auto x_dot_ = f({{xo}, {U(all, k)}});
+    auto x_dot = MX::vertcat(x_dot_);
+    std::cout << x_dot.size1() << std::endl;
+    std::cout << x_dot.size2() << std::endl;
+    auto F = 0.5*h  * x_dot ;
+    auto g_d = mtimes(D, transpose(xo)) - transpose(F);
+
+    //g.push_back(g_s);
+    g.push_back(MX::vec(g_d));
+
+    // Cost
+    auto l_k_ = J({{xo}, {U(all,k)}});
+    auto l_k = MX::vertcat(l_k_);
+    std::cout << l_k.size1() << std::endl;
+    std::cout << l_k.size2() << std::endl;
+    std::cout << w.size1() << std::endl;
+    std::cout << w.size2() << std::endl;
+    J_ += 0.5* h * mtimes(l_k , w); // quadrature
+}*/
