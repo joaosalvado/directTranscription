@@ -9,25 +9,21 @@ void LGLms::generate_constraints() {
     double h = T/(N-1);
     J_ = 0;
 
+    W = MX::vertcat({W, X(all,0)});
     for (int k = 0; k < N; ++k) {
         // Create collocation states
         auto o = ocp.variable(nx, n);
 
 
         auto xo = MX::horzcat({ X(all,k), o});
+        W = MX::horzcat({W, o});
         MX u = MX::repmat(U(all, k), 1, n+1);
         // Defect constraints
         auto x_dot_ = f({{o}, {U(all, k)}});
         auto x_dot = MX::vertcat(x_dot_);
-        std::cout << x_dot.size1() << std::endl;
-        std::cout << x_dot.size2() << std::endl;
         auto F = 0.5*h  * x_dot ;
         auto g_d = mtimes(D(Slice(1,n+1), all), transpose(xo)) - transpose(F);
-        std::cout << g_d.size1() << std::endl;
-        std::cout << g_d.size2() << std::endl;
-        auto h = MX::vec(g_d);
-        std::cout << h.size1() << std::endl;
-        std::cout << h.size2() << std::endl;
+
         // Shooting gap
         auto g_s = X(all,k+1) - o(all,n-1);
 
@@ -39,13 +35,13 @@ void LGLms::generate_constraints() {
         // Cost
         auto l_k_ = J({{xo}, {U(all,k)}});
         auto l_k = MX::vertcat(l_k_);
-        std::cout << l_k.size1() << std::endl;
-        std::cout << l_k.size2() << std::endl;
-        std::cout << w.size1() << std::endl;
-        std::cout << w.size2() << std::endl;
-        J_ += MX::sum2(l_k) ;//0.5* h * mtimes(l_k , w); // quadrature
-    }
+        J_ += 0.5* h * mtimes(l_k , w); // quadrature
 
+    }
+    std::cout << W.size1() << std::endl;
+    std::cout << W.size2() << std::endl;
+    std::cout << X.size1() << std::endl;
+    std::cout << X.size2() << std::endl;
 }
 
 
@@ -106,7 +102,7 @@ void LGLms::create_LGL_params(int degree){
             {-0.500000000000000, 0.500000000000000, 0},
             {-0.500000000000000, 0.500000000000000, 0}   });
         this->D = this->D(Slice(0,2));
-        this->w = DM({0.333333333333333, 1.333333333333333, 0.333333333333333});
+        this->w = DM({1, 1});
 
     }
     if(degree == 2){
@@ -115,7 +111,7 @@ void LGLms::create_LGL_params(int degree){
             {-1.50000000000000,	2,	-0.500000000000000},
             {-0.500000000000000,	0,	0.500000000000000},
             {0.500000000000000,	-2,	1.50000000000000} });
-        this->w = DM({1,1});
+        this->w = DM({0.333333333333333, 1.333333333333333, 0.333333333333333});
 
     }
     if(degree == 3){

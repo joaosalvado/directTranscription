@@ -1,14 +1,15 @@
 //
-// Created by ohmy on 2022-03-08.
+// Created by ohmy on 2022-03-11.
 //
 
-#ifndef DIRECTTRANSCRIPTION_LGLMS_H
-#define DIRECTTRANSCRIPTION_LGLMS_H
+#ifndef DIRECTTRANSCRIPTION_LLG_H
+#define DIRECTTRANSCRIPTION_LLG_H
+
 
 #include <casadi/casadi.hpp>
 using namespace casadi;
 
-class LGLms {
+class LLG {
 public:
     int N;
     double T;
@@ -32,18 +33,19 @@ public:
     DM tau; // Collocation nodes in [-1, 1]
     DM D;   // Differentiation matrix
     DM w;   // Weight quadrature
+    DM E;   // End State interpolation
     int n;  // Polynomial degree
     MX J_;
 
-    LGLms(casadi::MX &X_, casadi::MX &U_, int N, int T, int n,
-            Function &f_, Function J_, Opti & ocp_)
-    : X(X_), U(U_), f(f_), J(J_), ocp(ocp_) {
+    LLG(casadi::MX &X_, casadi::MX &U_, int N, int T, int n,
+          Function &f_, Function J_, Opti & ocp_)
+            : X(X_), U(U_), f(f_), J(J_), ocp(ocp_) {
         this->N = N; this->T = T; this->n = n;
-        create_LGL_params(n);
+        create_LLG_params(n);
         generate_constraints();
     }
 
-    void create_LGL_params(int degree);
+    void create_LLG_params(int degree);
     MX integrated_cost(MX t0, MX tf, int N);
     void generate_constraints();
     MX getStates(){return W;};
@@ -51,4 +53,4 @@ public:
 };
 
 
-#endif //DIRECTTRANSCRIPTION_LGLMS_H
+#endif //DIRECTTRANSCRIPTION_LLG_H

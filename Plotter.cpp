@@ -9,7 +9,7 @@ void Plotter::plot_path(DM x, DM y){
     auto p = plot(x.get_elements(), y.get_elements());
     p->line_width(2);
     p->marker(line_spec::marker_style::asterisk);
-    matplot::axis(matplot::equal);
+    //matplot::axis(matplot::equal);
     //show();
 }
 

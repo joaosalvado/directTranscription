@@ -5,15 +5,16 @@ using namespace casadi;
 #include "RK4multipleshooting.h"
 #include "LGLms.h"
 #include "CGLms.h"
+#include  "LLG.h"
 #include "Plotter.h"
 
 int main() {
     // 1 - Problem setup
 
     // 1.1 - Params
-    int n =3;
-    double T = 15;
-    int N = 3*T;
+    int n = 5;
+    double T = 200;
+    int N = 40; //3*T for RK4
     double L = 0.2;
     casadi::Opti ocp;
     DM x0 = DM::vertcat({ 10, 10, 0 });
@@ -49,6 +50,7 @@ int main() {
     auto f = Function("f", {x->X_ode(), u->U_ode()}, {X_dot});
 
     // 1.5 - Cost
+    //SX l = u->v_ode*u->v_ode + u->w_ode*u->w_ode;
     SX l = u->v_ode*u->v_ode + u->w_ode*u->w_ode;
     auto J = Function("l", {x->X_ode(), u->U_ode()}, {l});
 
@@ -63,7 +65,7 @@ int main() {
 
     // 1.7 - Boundary Constraints
     ocp.subject_to( x->X(all, 0 ) - x0 == 0);
-    ocp.subject_to( x->X(all, N ) - xf == 0 );
+    //ocp.subject_to( x->X(all, N ) - xf == 0 );
 
 
     // 2 - Transcription Methods
@@ -77,6 +79,8 @@ int main() {
     for(auto g_i : rk4ms.g){
         ocp.subject_to(g_i == 0 );
     }
+    cost = cost + mtimes(transpose(x->X(all, N ) - xf),(x->X(all, N ) - xf));
+
     ocp.minimize(cost);
     // 2.2 - Direct Global Collocation Multiple-shooting LGL
 /*    LGLms lgl_ms = LGLms(x->X, u->U, N, T, n, f, J, ocp);
@@ -85,17 +89,28 @@ int main() {
     for(auto g_i : lgl_ms.g){
         ocp.subject_to(g_i == 0 );
     }
+    cost = cost + mtimes(transpose(x->X(all, N ) - xf),(x->X(all, N ) - xf));
     ocp.minimize(cost);*/
+
     // 2.3 - Direct Global Collocation Multiple-shooting CGL
-/*
-    auto cgl_ms = CGLms(x->X, u->U, N, T, n, f, J, ocp);
+/*    auto cgl_ms = CGLms(x->X, u->U, N, T, n, f, J, ocp);
     MX cost = cgl_ms.integrated_cost(0, T, N);
 
     for(auto g_i : cgl_ms.g){
         ocp.subject_to(g_i == 0 );
     }
-    ocp.minimize(cost);
-*/
+
+    //cost = cost + mtimes(transpose(x->X(all, N ) - xf),(x->X(all, N ) - xf));
+    ocp.minimize(cost);*/
+
+    // 2.4 - Direct Global Collocation Multiple-shooting LLG
+/*    LLG llg_ms = LLG(x->X, u->U, N, T, n, f, J, ocp);
+    MX cost = llg_ms.integrated_cost(0, T, N);
+
+    for(auto g_i : llg_ms.g){
+        ocp.subject_to(g_i == 0 );
+    }
+    ocp.minimize(cost);*/
 
 
     // 3 - Solve
@@ -115,6 +130,8 @@ int main() {
     // 4 - Plot Solution
     Plotter plotter;
     plotter.plot_path(Xsol(0,all), Xsol(1,all));
+    //x->X = lgl_ms.getStates();
+    //Xsol = solution.value(x->X);
     plotter.plot_path_heading(Xsol(0,all), Xsol(1,all), Xsol(2, all));
     return 0;
 }

@@ -27,7 +27,7 @@
     % Original function: [varargout] = legslb(n) located at
     % http://www1.spms.ntu.edu.sg/~lilian/bookcodes/legen/legslb.m
     
-    N = 1;
+    N = 2;
     
     % Compute the initial guess of the interior LGL points
     thetak = (4*[1:N]-1)*pi/(4*N+2);

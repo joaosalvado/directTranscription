@@ -19,6 +19,7 @@ public:
     // Let nx be the number of states and nu of controls, e.g. se2 nx = 3 (x,y,o)
     casadi::MX &X; // State Shooting vars
     casadi::MX &U; // Control vars
+    casadi::MX W; // States + collocation states
     casadi::MX Tau; // Collocation nodes vars
     casadi::Function f;
     casadi::Function J;
@@ -45,6 +46,7 @@ public:
     void create_GGL_params(int degree);
     MX integrated_cost(MX t0, MX tf, int N);
     void generate_constraints();
+    MX getStates(){return W;};
 
     virtual ~CGLms(){}
 };
