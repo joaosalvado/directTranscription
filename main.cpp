@@ -12,7 +12,7 @@ int main() {
     // 1 - Problem setup
 
     // 1.1 - Params
-    int n = 5;
+    int n = 3;
     double T = 40;
     int N = 20; //3*T for RK4
     double L = 0.2;
