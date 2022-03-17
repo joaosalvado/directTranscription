@@ -4,6 +4,51 @@
 
 #include "LGLms.h"
 
+
+//void LGLms::generate_constraints() {
+//    int nx = X.size1();
+//    int nu = U.size1();
+//    double h = T/(N-1);
+//    J_ = 0;
+//
+//    W = MX::vertcat({W, X(all,0)});
+//    for (int k = 0; k < N; ++k) {
+//        // Create collocation states
+//        auto o = ocp.variable(nx, n-1);
+//        auto u = ocp.variable(nu, n-1);
+//
+//
+//        auto xo = MX::horzcat({ X(all,k), o, X(all,k+1)});
+//        o = MX::horzcat({o, X(all,k+1)});
+//        W = MX::horzcat({W, o});
+//        MX ut = MX::horzcat({u, U(all,k)});
+//        // Defect constraints
+//        auto x_dot_ = f({{o}, {ut}});
+//        auto x_dot = MX::vertcat(x_dot_);
+//        auto F = 0.5*h  * x_dot ;
+//        auto g_d = mtimes(D(Slice(1,n+1), all), transpose(xo)) - transpose(F);
+//
+//        // Shooting gap
+////        auto g_s = X(all,k+1) - o(all,n-1);
+////
+////        g.push_back(g_s);
+//        g.push_back(MX::vec(g_d));
+//
+//
+//
+//        // Cost
+//        MX utt = MX::horzcat({U(all,k),u, U(all,k)});
+//        auto l_k_ = J({{xo}, {utt}});
+//        auto l_k = MX::vertcat(l_k_);
+//        J_ += 0.5* h * mtimes(l_k , w); // quadrature
+//
+//    }
+//    std::cout << W.size1() << std::endl;
+//    std::cout << W.size2() << std::endl;
+//    std::cout << X.size1() << std::endl;
+//    std::cout << X.size2() << std::endl;
+//}
+
 void LGLms::generate_constraints() {
     int nx = X.size1();
     double h = T/(N-1);
@@ -12,10 +57,11 @@ void LGLms::generate_constraints() {
     W = MX::vertcat({W, X(all,0)});
     for (int k = 0; k < N; ++k) {
         // Create collocation states
-        auto o = ocp.variable(nx, n);
+        auto o = ocp.variable(nx, n-1);
 
 
-        auto xo = MX::horzcat({ X(all,k), o});
+        auto xo = MX::horzcat({ X(all,k), o, X(all,k+1)});
+         o = MX::horzcat({o, X(all,k+1)});
         W = MX::horzcat({W, o});
         MX u = MX::repmat(U(all, k), 1, n+1);
         // Defect constraints
@@ -25,9 +71,9 @@ void LGLms::generate_constraints() {
         auto g_d = mtimes(D(Slice(1,n+1), all), transpose(xo)) - transpose(F);
 
         // Shooting gap
-        auto g_s = X(all,k+1) - o(all,n-1);
-
-        g.push_back(g_s);
+//        auto g_s = X(all,k+1) - o(all,n-1);
+//
+//        g.push_back(g_s);
         g.push_back(MX::vec(g_d));
 
 

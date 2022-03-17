@@ -13,8 +13,8 @@ int main() {
 
     // 1.1 - Params
     int n = 5;
-    double T = 200;
-    int N = 40; //3*T for RK4
+    double T = 40;
+    int N = 20; //3*T for RK4
     double L = 0.2;
     casadi::Opti ocp;
     DM x0 = DM::vertcat({ 10, 10, 0 });
@@ -73,24 +73,24 @@ int main() {
 
 
     // 2.1 - Direct Local Collocation Multiple-shooting RK4
-    RK4multipleshooting rk4ms = RK4multipleshooting(x->X, u->U, N, T, f, J);
-    MX cost = rk4ms.integrated_cost(0, T, N);
-
-    for(auto g_i : rk4ms.g){
-        ocp.subject_to(g_i == 0 );
-    }
-    cost = cost + mtimes(transpose(x->X(all, N ) - xf),(x->X(all, N ) - xf));
-
-    ocp.minimize(cost);
+//    RK4multipleshooting rk4ms = RK4multipleshooting(x->X, u->U, N, T, f, J);
+//    MX cost = rk4ms.integrated_cost(0, T, N);
+//
+//    for(auto g_i : rk4ms.g){
+//        ocp.subject_to(g_i == 0 );
+//    }
+//    cost = cost + mtimes(transpose(x->X(all, N ) - xf),(x->X(all, N ) - xf));
+//
+//    ocp.minimize(cost);
     // 2.2 - Direct Global Collocation Multiple-shooting LGL
-/*    LGLms lgl_ms = LGLms(x->X, u->U, N, T, n, f, J, ocp);
+    LGLms lgl_ms = LGLms(x->X, u->U, N, T, n, f, J, ocp);
     MX cost = lgl_ms.integrated_cost(0, T, N);
 
     for(auto g_i : lgl_ms.g){
         ocp.subject_to(g_i == 0 );
     }
     cost = cost + mtimes(transpose(x->X(all, N ) - xf),(x->X(all, N ) - xf));
-    ocp.minimize(cost);*/
+    ocp.minimize(cost);
 
     // 2.3 - Direct Global Collocation Multiple-shooting CGL
 /*    auto cgl_ms = CGLms(x->X, u->U, N, T, n, f, J, ocp);
@@ -130,8 +130,8 @@ int main() {
     // 4 - Plot Solution
     Plotter plotter;
     plotter.plot_path(Xsol(0,all), Xsol(1,all));
-    //x->X = lgl_ms.getStates();
-    //Xsol = solution.value(x->X);
+    x->X = lgl_ms.getStates();
+    Xsol = solution.value(x->X);
     plotter.plot_path_heading(Xsol(0,all), Xsol(1,all), Xsol(2, all));
     return 0;
 }
