@@ -13,7 +13,7 @@ int main() {
 
     // 1.1 - Params
     int n = 3;
-    double T = 40;
+    double T = 10;
     int N = 20; //3*T for RK4
     double L = 0.2;
     casadi::Opti ocp;
@@ -126,6 +126,7 @@ int main() {
     DM Usol = solution.value(u->U);
     std::cout << Xsol << std::endl;
     std::cout << Usol << std::endl;
+    std::cout << solution.value(cost) << std::endl;
 
     // 4 - Plot Solution
     Plotter plotter;
