@@ -6,14 +6,14 @@ using namespace casadi;
 #include "LGLms.h"
 #include "CGLms.h"
 #include  "LLG.h"
-#include "Plotter.h"
+#include "Plotter_dt.h"
 
 int main() {
     // 1 - Problem setup
 
     // 1.1 - Params
     int n = 3;
-    double T = 10;
+    double T = 20;
     int N = 20; //3*T for RK4
     double L = 0.2;
     casadi::Opti ocp;
@@ -129,7 +129,7 @@ int main() {
     std::cout << solution.value(cost) << std::endl;
 
     // 4 - Plot Solution
-    Plotter plotter;
+    Plotter_dt plotter;
     plotter.plot_path(Xsol(0,all), Xsol(1,all));
     x->X = lgl_ms.getStates();
     Xsol = solution.value(x->X);

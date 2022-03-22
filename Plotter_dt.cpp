@@ -2,10 +2,10 @@
 // Created by ohmy on 2022-03-07.
 //
 
-#include "Plotter.h"
+#include "Plotter_dt.h"
 #include "matplot/matplot.h"
 using namespace matplot;
-void Plotter::plot_path(DM x, DM y){
+void Plotter_dt::plot_path(DM x, DM y){
     auto p = plot(x.get_elements(), y.get_elements());
     p->line_width(2);
     p->marker(line_spec::marker_style::asterisk);
@@ -13,7 +13,7 @@ void Plotter::plot_path(DM x, DM y){
     //show();
 }
 
-void Plotter::plot_path_heading(DM x, DM y, DM o){
+void Plotter_dt::plot_path_heading(DM x, DM y, DM o){
     int N = x.size2();
     double L= 0.025;
     auto x_head = std::vector<double>(N);
@@ -45,6 +45,6 @@ void Plotter::plot_path_heading(DM x, DM y, DM o){
     show();
 }
 
-void Plotter::plot_var(DM var){
+void Plotter_dt::plot_var(DM var){
 
 }
