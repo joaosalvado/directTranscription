@@ -19,6 +19,7 @@ void LGLms::generate_constraints() {
 
 
         auto xo = MX::horzcat({X(all, k), o, X(all, k + 1)});
+        auto xp =  MX::horzcat({X(all, k), o});
         o = MX::horzcat({o, X(all, k + 1)});
         W = MX::horzcat({W, o});
         MX ut = MX::horzcat({U(all, k), u});
@@ -44,7 +45,7 @@ void LGLms::generate_constraints() {
         // Cost
 //        MX utt = MX::horzcat({U(all,k),u, U(all,k)});
 //        auto l_k_ = J({{xo}, {utt}});
-        MX utt;
+/*        MX utt;
         if (k == N - 1) {
             utt = MX::horzcat({U(all, k), u, MX::zeros(nu,1)});
         } else {
@@ -52,7 +53,14 @@ void LGLms::generate_constraints() {
         }
         auto l_k_ = J({{xo}, {utt}});
         auto l_k = MX::vertcat(l_k_);
-        J_ += 0.5 * h * mtimes(l_k, w); // quadrature
+        J_ += 0.5 * h * mtimes(l_k, w); // quadrature*/
+
+
+        auto utt =  MX::horzcat({U(all,k),u});
+
+        auto l_k_ = J({{xp}, {utt}});
+        auto l_k = MX::vertcat(l_k_);
+        J_ += 0.5 * h * mtimes(l_k, w(Slice(0,n)));
 
     }
 

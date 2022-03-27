@@ -13,12 +13,11 @@ int main() {
 
     // 1.1 - Params
     int n = 3;
-    double T =10;
-    int N = 50; //3*T for RK4
+    double T = 20;
+    int N = 20; //3*T for RK4
     double L = 0.2;
-    double v_std = 0.5;
     casadi::Opti ocp;
-    DM x0 = DM::vertcat({ 20, 20, 0 });
+    DM x0 = DM::vertcat({ 10, 10, 0 });
     DM xf = DM::vertcat({ 1, 1, -M_PI/2});
     Slice all;
 
@@ -51,9 +50,8 @@ int main() {
     auto f = Function("f", {x->X_ode(), u->U_ode()}, {X_dot});
 
     // 1.5 - Cost
-    SX l = -u->v_ode*u->v_ode + u->w_ode*u->w_ode;
-    //SX l =  u->w_ode*u->w_ode;
-    //SX l = x->x_ode*x->x_ode + x->y_ode*x->y_ode;
+    //SX l = u->v_ode*u->v_ode + u->w_ode*u->w_ode;
+    SX l = u->v_ode*u->v_ode + u->w_ode*u->w_ode;
     auto J = Function("l", {x->X_ode(), u->U_ode()}, {l});
 
     // 1.6 - Bounds on controls
@@ -72,6 +70,18 @@ int main() {
 
     // 2 - Transcription Methods
 
+
+
+    // 2.1 - Direct Local Collocation Multiple-shooting RK4
+//    RK4multipleshooting rk4ms = RK4multipleshooting(x->X, u->U, N, T, f, J);
+//    MX cost = rk4ms.integrated_cost(0, T, N);
+//
+//    for(auto g_i : rk4ms.g){
+//        ocp.subject_to(g_i == 0 );
+//    }
+//    cost = cost + mtimes(transpose(x->X(all, N ) - xf),(x->X(all, N ) - xf));
+//
+//    ocp.minimize(cost);
     // 2.2 - Direct Global Collocation Multiple-shooting LGL
     LGLms lgl_ms = LGLms(x->X, u->U, N, T, n, f, J, ocp);
     MX cost = lgl_ms.integrated_cost(0, T, N);
@@ -79,49 +89,29 @@ int main() {
     for(auto g_i : lgl_ms.g){
         ocp.subject_to(g_i == 0 );
     }
-    //cost = cost + mtimes(transpose(x->X(all, N ) - xf),(x->X(all, N ) - xf));
+    cost = cost + mtimes(transpose(x->X(all, N ) - xf),(x->X(all, N ) - xf));
+    ocp.minimize(cost);
 
-    // Second Part
-    int n2 = 3;
-    double T2 = 20;
-    int N2 = 20;
+    // 2.3 - Direct Global Collocation Multiple-shooting CGL
+/*    auto cgl_ms = CGLms(x->X, u->U, N, T, n, f, J, ocp);
+    MX cost = cgl_ms.integrated_cost(0, T, N);
 
-    auto xend = ocp.variable(3,N2+1);
-    auto uend = ocp.variable(2,N2);
-    for(int k = 0; k < N2; ++k) {
-        ocp.subject_to(uend(all, k) <= u_bound);
-        ocp.subject_to(uend(all, k) >= -u_bound);
-    }
-    for(int k = 0; k < N2; ++k) {
-        ocp.subject_to(xend(all, k) >= 0);
-    }
-
-    SX l2 = (u->v_ode)*(u->v_ode) + u->w_ode*u->w_ode;
-/*    SX l2 = (x->x_ode-xf(0).scalar())*(x->x_ode-xf(0).scalar())
-            + (x->y_ode-xf(1).scalar())*(x->y_ode-xf(1).scalar());*/
-    auto J2 = Function("l", {x->X_ode(), u->U_ode()}, {l2});
-    LGLms lgl_ms2 = LGLms(xend, uend, N2, T2, n2, f, J2, ocp);
-    MX cost2 = lgl_ms2.integrated_cost(0, T2, N2);
-    for(auto g_i : lgl_ms2.g){
+    for(auto g_i : cgl_ms.g){
         ocp.subject_to(g_i == 0 );
     }
 
-    // Patch condition
-    ocp.subject_to(xend(all, 0) - x->X(all,N) ==0);
-    // End goal
-    ocp.subject_to( xend(all, N2) - xf == 0 );
+    //cost = cost + mtimes(transpose(x->X(all, N ) - xf),(x->X(all, N ) - xf));
+    ocp.minimize(cost);*/
 
-    auto x_plot1 = lgl_ms.getStates();
-    auto x_plot2 = lgl_ms2.getStates();
-    auto x_plot = MX::horzcat({x_plot1, x_plot2});
+    // 2.4 - Direct Global Collocation Multiple-shooting LLG
+/*    LLG llg_ms = LLG(x->X, u->U, N, T, n, f, J, ocp);
+    MX cost = llg_ms.integrated_cost(0, T, N);
 
+    for(auto g_i : llg_ms.g){
+        ocp.subject_to(g_i == 0 );
+    }
+    ocp.minimize(cost);*/
 
-    //ocp.minimize((T*T)*cost+(T2*T2)*cost2);
-    ocp.minimize((T*T)*cost+(T2*T2)*cost2);
-
-
-    x->X = MX::horzcat({x->X, xend});
-    u->U = MX::horzcat({u->U, uend});
 
     // 3 - Solve
     Dict p_opts, s_opts;
@@ -132,8 +122,6 @@ int main() {
     ocp.solver(solver, p_opts, s_opts);
 
     auto solution = ocp.solve();
-
-    Plotter_dt plotter;
     DM Xsol = solution.value(x->X);
     DM Usol = solution.value(u->U);
     std::cout << Xsol << std::endl;
@@ -141,9 +129,10 @@ int main() {
     std::cout << solution.value(cost) << std::endl;
 
     // 4 - Plot Solution
-
+    Plotter_dt plotter;
     plotter.plot_path(Xsol(0,all), Xsol(1,all));
-     Xsol = solution.value(x_plot1);
+    x->X = lgl_ms.getStates();
+    Xsol = solution.value(x->X);
     plotter.plot_path_heading(Xsol(0,all), Xsol(1,all), Xsol(2, all));
     return 0;
 }
