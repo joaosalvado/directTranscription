@@ -13,11 +13,11 @@ int main() {
 
     // 1.1 - Params
     int n = 3;
-    double T = 20;
+    double T = 10;
     int N = 20; //3*T for RK4
     double L = 0.2;
     casadi::Opti ocp;
-    DM x0 = DM::vertcat({ 10, 10, 0 });
+    DM x0 = DM::vertcat({ 2, 2, -M_PI + 0.25*M_PI });
     DM xf = DM::vertcat({ 1, 1, -M_PI/2});
     Slice all;
 
@@ -67,7 +67,12 @@ int main() {
     ocp.subject_to( x->X(all, 0 ) - x0 == 0);
     //ocp.subject_to( x->X(all, N ) - xf == 0 );
 
-
+    // Cost
+    MX cost;
+    for(int k = 0; k < N-1; k++){
+        //cost = cost + mtimes(transpose(u->U(all, k+1) -  u->U(all, k)), u->U(all, k+1) -  u->U(all, k)) ;
+        cost = cost + sum1(sum2(u->U(all, k+1) -  u->U(all, k)));
+    }
     // 2 - Transcription Methods
 
 
@@ -84,7 +89,7 @@ int main() {
 //    ocp.minimize(cost);
     // 2.2 - Direct Global Collocation Multiple-shooting LGL
     LGLms lgl_ms = LGLms(x->X, u->U, N, T, n, f, J, ocp);
-    MX cost = lgl_ms.integrated_cost(0, T, N);
+    cost = lgl_ms.integrated_cost(0, T, N);
 
     for(auto g_i : lgl_ms.g){
         ocp.subject_to(g_i == 0 );

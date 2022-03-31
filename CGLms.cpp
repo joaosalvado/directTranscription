@@ -44,7 +44,6 @@ void CGLms::generate_constraints() {
         // Create collocation states
         auto o = ocp.variable(nx, n);
 
-
         auto xo = MX::horzcat({ X(all,k), o});
         W = MX::horzcat({W, o});
         MX u = MX::repmat(U(all, k), 1, n+1);

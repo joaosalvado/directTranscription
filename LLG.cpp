@@ -34,8 +34,6 @@ void LLG::generate_constraints() {
         g.push_back(g_s);
         g.push_back(MX::vec(g_d));
 
-
-
         // Cost
         auto l_k_ = J({{o}, {U(all,k)}});
         auto l_k = MX::vertcat(l_k_);

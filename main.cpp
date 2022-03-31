@@ -14,7 +14,7 @@ int main() {
     // 1.1 - Params
     int n = 3;
     double T =10;
-    int N = 50; //3*T for RK4
+    int N = 30; //3*T for RK4
     double L = 0.2;
     double v_std = 0.5;
     casadi::Opti ocp;
@@ -51,7 +51,7 @@ int main() {
     auto f = Function("f", {x->X_ode(), u->U_ode()}, {X_dot});
 
     // 1.5 - Cost
-    SX l = -u->v_ode*u->v_ode + u->w_ode*u->w_ode;
+    SX l = (u->v_ode-v_std)*(u->v_ode-v_std) + u->w_ode*u->w_ode;
     //SX l =  u->w_ode*u->w_ode;
     //SX l = x->x_ode*x->x_ode + x->y_ode*x->y_ode;
     auto J = Function("l", {x->X_ode(), u->U_ode()}, {l});
@@ -83,8 +83,8 @@ int main() {
 
     // Second Part
     int n2 = 3;
-    double T2 = 20;
-    int N2 = 20;
+    double T2 = 50;
+    int N2 = 10;
 
     auto xend = ocp.variable(3,N2+1);
     auto uend = ocp.variable(2,N2);
@@ -96,7 +96,7 @@ int main() {
         ocp.subject_to(xend(all, k) >= 0);
     }
 
-    SX l2 = (u->v_ode)*(u->v_ode) + u->w_ode*u->w_ode;
+    SX l2 = (u->v_ode-v_std)*(u->v_ode-v_std) + u->w_ode*u->w_ode;
 /*    SX l2 = (x->x_ode-xf(0).scalar())*(x->x_ode-xf(0).scalar())
             + (x->y_ode-xf(1).scalar())*(x->y_ode-xf(1).scalar());*/
     auto J2 = Function("l", {x->X_ode(), u->U_ode()}, {l2});
@@ -115,9 +115,20 @@ int main() {
     auto x_plot2 = lgl_ms2.getStates();
     auto x_plot = MX::horzcat({x_plot1, x_plot2});
 
-
+    for(int k = 0; k < N-1; k++){
+        cost = cost + mtimes(transpose(u->U(all, k+1) -  u->U(all, k)), u->U(all, k+1) -  u->U(all, k)) ;
+        //cost = cost + sum1(sum2(u->U(all, k+1) -  u->U(all, k)));
+        cost = cost + mtimes(transpose(x->X(all, k ) - xf),(x->X(all, k ) - xf));
+    }
+    //cost = cost + mtimes(transpose(x->X(all, N ) - xf),(x->X(all, N ) - xf));
+    for(int k = 0; k < N2-1; k++){
+        cost2 = cost2 + mtimes(transpose(uend(all, k+1) -  uend(all, k)), uend(all, k+1) -  uend(all, k)) ;
+        //cost2 = cost2 + sum1(sum2(uend(all, k+1) -  uend(all, k)));
+        cost2 = cost2 + mtimes(transpose(xend(all, k ) - xf),(xend(all, k ) - xf));
+    }
+    //cost2 = cost2 + mtimes(transpose(xend(all, N2 ) - xf),(xend(all, N2 ) - xf));
     //ocp.minimize((T*T)*cost+(T2*T2)*cost2);
-    ocp.minimize((T*T)*cost+(T2*T2)*cost2);
+    ocp.minimize((T)*cost+(T2)*cost2);
 
 
     x->X = MX::horzcat({x->X, xend});
