@@ -49,6 +49,7 @@ MX LLG::integrated_cost(MX t0, MX tf, int N) {
 void LLG::create_LLG_params(int degree){
     tau = casadi::collocation_points(degree, "legendre");
     casadi::collocation_coeff(tau.get_elements(), D, E, w);
+    //casadi::collocation_interpolators(tau.get_elements(),D, E);
 }
 
 

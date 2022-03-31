@@ -14,7 +14,7 @@ int main() {
     // 1.1 - Params
     int n = 3;
     double T =10;
-    int N = 30; //3*T for RK4
+    int N = 10; //3*T for RK4
     double L = 0.2;
     double v_std = 0.5;
     casadi::Opti ocp;
@@ -83,7 +83,7 @@ int main() {
 
     // Second Part
     int n2 = 3;
-    double T2 = 50;
+    double T2 = 30;
     int N2 = 10;
 
     auto xend = ocp.variable(3,N2+1);
@@ -109,7 +109,7 @@ int main() {
     // Patch condition
     ocp.subject_to(xend(all, 0) - x->X(all,N) ==0);
     // End goal
-    ocp.subject_to( xend(all, N2) - xf == 0 );
+    //ocp.subject_to( xend(all, N2) - xf == 0 );
 
     auto x_plot1 = lgl_ms.getStates();
     auto x_plot2 = lgl_ms2.getStates();
@@ -118,15 +118,15 @@ int main() {
     for(int k = 0; k < N-1; k++){
         cost = cost + mtimes(transpose(u->U(all, k+1) -  u->U(all, k)), u->U(all, k+1) -  u->U(all, k)) ;
         //cost = cost + sum1(sum2(u->U(all, k+1) -  u->U(all, k)));
-        cost = cost + mtimes(transpose(x->X(all, k ) - xf),(x->X(all, k ) - xf));
+        //cost = cost + mtimes(transpose(x->X(all, k ) - xf),(x->X(all, k ) - xf));
     }
     //cost = cost + mtimes(transpose(x->X(all, N ) - xf),(x->X(all, N ) - xf));
     for(int k = 0; k < N2-1; k++){
         cost2 = cost2 + mtimes(transpose(uend(all, k+1) -  uend(all, k)), uend(all, k+1) -  uend(all, k)) ;
         //cost2 = cost2 + sum1(sum2(uend(all, k+1) -  uend(all, k)));
-        cost2 = cost2 + mtimes(transpose(xend(all, k ) - xf),(xend(all, k ) - xf));
+        //cost2 = cost2 + mtimes(transpose(xend(all, k ) - xf),(xend(all, k ) - xf));
     }
-    //cost2 = cost2 + mtimes(transpose(xend(all, N2 ) - xf),(xend(all, N2 ) - xf));
+    cost2 = cost2 + mtimes(transpose(xend(all, N2 ) - xf),(xend(all, N2 ) - xf));
     //ocp.minimize((T*T)*cost+(T2*T2)*cost2);
     ocp.minimize((T)*cost+(T2)*cost2);
 

@@ -5,6 +5,22 @@
 #include "Plotter_dt.h"
 #include "matplot/matplot.h"
 using namespace matplot;
+
+// note dt > t
+std::vector<double> Plotter_dt::basis(double t, double dt, int n){
+    auto phi = std::vector<double>(n+1);
+    double tau = 2*t / dt - 1;
+    for(int n_i = 0; n_i < n+1; ++n_i){
+        for()
+        phi(n_i) =
+    }
+
+}
+
+void Plotter_dt::plot_more_points_path(DM x, DM y, DM o, double Tf, int n){
+
+}
+
 void Plotter_dt::plot_path(DM x, DM y){
     auto p = plot(x.get_elements(), y.get_elements());
     p->line_width(2);
