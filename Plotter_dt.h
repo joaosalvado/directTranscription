@@ -14,8 +14,8 @@ public:
     void plot_path(DM x, DM y);
     void plot_path_heading(DM x, DM y, DM o);
     void plot_var(DM var);
-    void plot_more_points_path(DM x, DM y, DM o, double Tf, int n);
-    std::vector<double> basis(double t, double dt, int n); // note dt > t
+    void plot_more_points_path(DM x, DM y, DM o, double Tf, int n, std::vector<double> tau_v);
+    std::vector<double> basis(double t, double dt, int n, std::vector<double> tau_v); // note dt > t
 };
 
 

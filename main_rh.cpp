@@ -28,7 +28,7 @@ std::vector<double> &xf_new, std::vector<double> &u0_new ){
     // 1.1 - Params
     int n = 3;
 
-    double T = 5;
+    double T = 10;
     int N = 10; //3*T for RK4
     double L = 0.2;
     double v_std = 0.5;
@@ -43,9 +43,9 @@ std::vector<double> &xf_new, std::vector<double> &u0_new ){
 
     // 1.4 - Dynamics Model
     SX X_dot = SX::vertcat(
-            {u->v_ode *(1 - x->o_ode*x->o_ode),
-             u->v_ode * (2 * x->o_ode),
-             u->w_ode});
+            {u->v_ode * cos(x->o_ode),
+             u->v_ode * sin(x->o_ode),
+             (1 / L) * u->w_ode});
     auto f = Function("f", {x->X_ode(), u->U_ode()}, {X_dot});
 
     // 1.5 - Cost
@@ -54,14 +54,13 @@ std::vector<double> &xf_new, std::vector<double> &u0_new ){
 
     // 1.6 - Bounds on controls
     double v_bound = 1;
-    double w_bound = 0.5;
+    double w_bound = 2;
     DM u_bound = DM::vertcat({v_bound, w_bound});
     for(int k = 0; k < N; ++k) {
-        ocp.subject_to(u->U(all, k) <= w_bound);
-        ocp.subject_to(u->U(all, k) >= -w_bound);
-        ocp.subject_to(u->U(0,k) * ( 1 + x->X(2, k)*x->X(2,k)) <= v_bound);
-        ocp.subject_to(u->U(0,k) * ( 1 + x->X(2, k)*x->X(2,k)) >= -v_bound);
+        ocp.subject_to(u->U(all, k) <= u_bound);
+        ocp.subject_to(u->U(all, k) >= -u_bound);
     }
+
     // 1.7 - Boundary Constraints
     ocp.subject_to( x->X(all, 0 ) - x0 == 0);
     //ocp.subject_to( u->U(all, 0 ) - u0 == 0);
@@ -78,7 +77,7 @@ std::vector<double> &xf_new, std::vector<double> &u0_new ){
 
     // Second Part
     int n2 = 4;
-    double T2 = Tf-5;
+    double T2 = Tf-10;
     int N2 = 5;
 
     auto xend = ocp.variable(3,N2+1);
@@ -122,7 +121,7 @@ std::vector<double> &xf_new, std::vector<double> &u0_new ){
         //cost2 = cost2 + mtimes(transpose(xend(all, k ) - xf),(xend(all, k ) - xf));
     }
     auto slicexy = Slice(0,2);
-    cost2 = cost2 + mtimes(transpose(xend(all, N2 ) - xf),(xend(all, N2 ) - xf));
+    cost2 = cost2 + mtimes(transpose(xend(slicexy, N2 ) - xf),(xend(slicexy, N2 ) - xf));
     //ocp.minimize((T*T)*cost+(T2*T2)*cost2);
     ocp.minimize((T)*cost+(T2)*cost2);
 
@@ -158,7 +157,7 @@ std::vector<double> &xf_new, std::vector<double> &u0_new ){
     Xsol = solution.value(x_plot1);
     plotter.plot_more_points_path(Xsol(0,all), Xsol(1,all), Xsol(2,all), T,n, lgl_ms.tau.get_elements());
 
-    //plotter.plot_path_heading(Xsol(0,all), Xsol(1,all), Xsol(2, all));
+    plotter.plot_path_heading(Xsol(0,all), Xsol(1,all), Xsol(2, all));
 
     auto N_ = Xsol.size2();
     xf_new.push_back(Xsol(0, N_-1).scalar());
@@ -168,13 +167,13 @@ std::vector<double> &xf_new, std::vector<double> &u0_new ){
 }
 
 int main() {
-    DM xf = DM::vertcat({ 1, 20, tan(90/4)});
-    DM x0 = DM::vertcat({ 1, 1, tan(90/4)});
+    DM xf = DM::vertcat({ 20, 20});
+    DM x0 = DM::vertcat({ 1, 1, 1.5*M_PI});
     std::vector<double> xf_new, uf_new;
-    rh(x0.get_elements(), {0.0,0.0},xf.get_elements(), 20, xf_new, uf_new );
+    rh(x0.get_elements(), {0.0,0.0},xf.get_elements(), 40, xf_new, uf_new );
     std::vector<double> xf_new2, uf_new2;
-    rh(xf_new, uf_new,xf.get_elements(), 15, xf_new2, uf_new2 );
+    rh(xf_new, uf_new,xf.get_elements(), 30, xf_new2, uf_new2 );
     std::vector<double> xf_new3, uf_new3;
-    rh(xf_new2, uf_new2,xf.get_elements(), 10, xf_new2, uf_new2 );
+    rh(xf_new2, uf_new2,xf.get_elements(), 20, xf_new2, uf_new2 );
     return 0;
 }

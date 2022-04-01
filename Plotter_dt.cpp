@@ -7,25 +7,59 @@
 using namespace matplot;
 
 // note dt > t
-std::vector<double> Plotter_dt::basis(double t, double dt, int n){
-    auto phi = std::vector<double>(n+1);
+std::vector<double> Plotter_dt::basis(
+        double t, double dt, int n, std::vector<double> tau_v){
+    auto phi = std::vector<double>(n+1,1);
     double tau = 2*t / dt - 1;
     for(int n_i = 0; n_i < n+1; ++n_i){
-        for()
-        phi(n_i) =
+        for(int tau_i = 0; tau_i < n+1; ++tau_i) {
+            if(tau_i == n_i) continue;
+            phi[n_i] = phi[n_i] * (tau - tau_v[tau_i]) / (tau_v[n_i]- tau_v[tau_i]);
+        }
     }
-
+    return phi;
 }
 
-void Plotter_dt::plot_more_points_path(DM x, DM y, DM o, double Tf, int n){
+void Plotter_dt::plot_more_points_path(DM x, DM y, DM o, double Tf, int n, std::vector<double> tau_v){
+    auto N = x.size2();
+    auto dt = n*Tf / (N-1); // polynomial period
 
+    // Linear Spaced time
+    float space = Tf/(10*N);
+    std::vector<float> t(10*N+1);
+    std::generate(t.begin(), t.end(), [n = 0, &space]() mutable { return n++ * space; });
+
+    std::vector<double> x_f, y_f, o_f;
+    int pol_i = 0;
+    for(auto t_ : t){
+        if( t_ - pol_i*dt > dt){ pol_i++;}
+
+        auto phi = basis(t_ - pol_i*dt, dt, n, tau_v);
+        double x_t_ = 0, y_t_ = 0, o_t_ = 0;
+        for( int n_i = 0; n_i < n+1; ++n_i){
+            x_t_ = x_t_ + x(n_i + n*pol_i).scalar() * phi[n_i];
+            y_t_ = y_t_ + y(n_i + n*pol_i).scalar() * phi[n_i];
+            o_t_ = o_t_ + o(n_i + n*pol_i).scalar() * phi[n_i];
+        }
+        x_f.push_back(x_t_); y_f.push_back(y_t_); o_f.push_back(o_t_);
+
+    }
+
+
+    auto p = plot(x_f, y_f);
+    p->line_width(1);
+    p->marker(line_spec::marker_style::diamond);
+    p->color("r");
+
+    show();
 }
 
 void Plotter_dt::plot_path(DM x, DM y){
     auto p = plot(x.get_elements(), y.get_elements());
     p->line_width(2);
     p->marker(line_spec::marker_style::asterisk);
-    //matplot::axis(matplot::equal);
+    matplot::hold(true);
+    matplot::axis(matplot::equal);
     //show();
 }
 
