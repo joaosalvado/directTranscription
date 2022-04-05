@@ -7,6 +7,28 @@ using namespace casadi;
 #include "CGLms.h"
 #include  "LLG.h"
 #include "Plotter_dt.h"
+
+
+double estimate_distance( std::vector<double> x0, std::vector<double> xf){
+    double alpha = 0.5;
+    double beta = 1.0;
+    auto euclidean_dist =
+            std::sqrt(std::pow(x0[0]-xf[0],2.0) + std::pow(x0[1]-xf[1], 2.0));
+    auto angle_dist = std::abs(x0[2] -xf[2]);
+    if(angle_dist > M_PI) angle_dist = 2*M_PI - angle_dist;
+    return beta * (euclidean_dist + alpha  * angle_dist);
+}
+
+double estimate_T(double d, double v_std){
+    double beta = 1.0;
+    return beta * d / v_std;
+}
+
+double estimate_T1(int  N, double L, double v_max){
+    double beta = 1.0;
+    return N * L / (beta * v_max);
+}
+
 // 0.2 - State: SE2
 struct se1{
     casadi::MX X; //Discrete states
@@ -28,13 +50,14 @@ std::vector<double> &xf_new, std::vector<double> &u0_new ){
     // 1.1 - Params
     int n = 3;
 
-    double T = 5;
+
     int N = 10; //3*T for RK4
-    double L = 0.2;
+    double L = 0.5;
     double v_std = 0.5;
+    double v_max = 1.0;
     casadi::Opti ocp;
     Slice all;
-
+    double T = estimate_T1(3*N, L, v_max);
 
     auto x = std::make_shared<se1>();
     x->X =  ocp.variable(3, N+1) ;
@@ -53,7 +76,7 @@ std::vector<double> &xf_new, std::vector<double> &u0_new ){
     auto J = Function("l", {x->X_ode(), u->U_ode()}, {l});
 
     // 1.6 - Bounds on controls
-    double v_bound = 1;
+    double v_bound = v_max;
     double w_bound = 0.5;
     DM u_bound = DM::vertcat({v_bound, w_bound});
     for(int k = 0; k < N; ++k) {
@@ -78,7 +101,7 @@ std::vector<double> &xf_new, std::vector<double> &u0_new ){
 
     // Second Part
     int n2 = 4;
-    double T2 = Tf-5;
+    double T2 = (Tf-T);
     int N2 = 5;
 
     auto xend = ocp.variable(3,N2+1);
@@ -115,11 +138,11 @@ std::vector<double> &xf_new, std::vector<double> &u0_new ){
         //cost = cost + sum1(sum2(u->U(all, k+1) -  u->U(all, k)));
         //cost = cost + mtimes(transpose(x->X(all, k ) - xf),(x->X(all, k ) - xf));
     }
-    //cost = cost + mtimes(transpose(x->X(all, N ) - xf),(x->X(all, N ) - xf));
+    cost = cost + (1/10)*mtimes(transpose(x->X(all, N ) - xf),(x->X(all, N ) - xf));
     for(int k = 0; k < N2-1; k++){
         cost2 = cost2 + mtimes(transpose(uend(all, k+1) -  uend(all, k)), uend(all, k+1) -  uend(all, k)) ;
         //cost2 = cost2 + sum1(sum2(uend(all, k+1) -  uend(all, k)));
-        //cost2 = cost2 + mtimes(transpose(xend(all, k ) - xf),(xend(all, k ) - xf));
+        cost2 = cost2 + mtimes(transpose(xend(all, k ) - xf),(xend(all, k ) - xf));
     }
     auto slicexy = Slice(0,2);
     cost2 = cost2 + mtimes(transpose(xend(all, N2 ) - xf),(xend(all, N2 ) - xf));
@@ -167,14 +190,25 @@ std::vector<double> &xf_new, std::vector<double> &u0_new ){
 
 }
 
+
 int main() {
-    DM xf = DM::vertcat({ 1, 20, tan(90/4)});
-    DM x0 = DM::vertcat({ 1, 1, tan(90/4)});
+    double v_std = 0.5;
+    DM xf = DM::vertcat({ 1, 20, tan(0.9*M_PI/2)});
+    DM x0 = DM::vertcat({ 1, 1, tan(0.9*M_PI/2)});
+
+    // Iter 1
     std::vector<double> xf_new, uf_new;
-    rh(x0.get_elements(), {0.0,0.0},xf.get_elements(), 20, xf_new, uf_new );
+    auto d = estimate_distance(x0.get_elements(), xf.get_elements());
+    rh(x0.get_elements(), {0.0,0.0},xf.get_elements(), estimate_T(d,v_std), xf_new, uf_new );
+
+    // Iter 2
     std::vector<double> xf_new2, uf_new2;
-    rh(xf_new, uf_new,xf.get_elements(), 15, xf_new2, uf_new2 );
+    d = estimate_distance(xf_new, xf.get_elements());
+    rh(xf_new, uf_new,xf.get_elements(), estimate_T(d, v_std), xf_new2, uf_new2 );
+
+    // Iter 3
     std::vector<double> xf_new3, uf_new3;
-    rh(xf_new2, uf_new2,xf.get_elements(), 10, xf_new2, uf_new2 );
+    d = estimate_distance(xf_new2, xf.get_elements());
+    rh(xf_new2, uf_new2,xf.get_elements(), estimate_T(d, v_std), xf_new2, uf_new2 );
     return 0;
 }
