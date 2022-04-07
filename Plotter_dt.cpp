@@ -25,8 +25,8 @@ void Plotter_dt::plot_more_points_path(DM x, DM y, DM o, double Tf, int n, std::
     auto dt = n*Tf / (N-1); // polynomial period
 
     // Linear Spaced time
-    float space = Tf/(10*N);
-    std::vector<float> t(10*N+1);
+    float space = Tf/(3*N);
+    std::vector<float> t(3*N);
     std::generate(t.begin(), t.end(), [n = 0, &space]() mutable { return n++ * space; });
 
     std::vector<double> x_f, y_f, o_f;

@@ -9,7 +9,10 @@ using namespace casadi;
 #include "Plotter_dt.h"
 
 
-
+int N_init = 10; // 3*T for RK4
+double L = 0.5;
+double v_std = 0.5;
+double v_max = 1.0;
 
 double estimate_distance( std::vector<double> x0, std::vector<double> xf){
     double alpha = 0.5;
@@ -23,7 +26,7 @@ double estimate_distance( std::vector<double> x0, std::vector<double> xf){
 
 double estimate_T(double d, double v_std){
     double beta = 1.0;
-    return beta * d / v_std;
+    return beta * d / v_max;
 }
 
 double estimate_T1(int  N, double L, double v_max){
@@ -36,10 +39,7 @@ double estimate_N( double T1, double L, double v_max){
     return beta * T1 * v_max / L;
 }
 
-int N_init = 10; // 3*T for RK4
-double L = 0.5;
-double v_std = 0.5;
-double v_max = 1.0;
+
 double T1 = estimate_T1(3*N_init, L, v_max);
 
 // 0.2 - State: SE2
@@ -68,7 +68,7 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , bool final = false){
     double T;
     int N;
     if(final){
-        T = std::max(1.5*Tf, 2.0);
+        T = std::max(2*Tf, 2.0);
         N = std::max(estimate_N(T,L, v_max), 3.0);
     } else{
         T = T1;
@@ -100,11 +100,11 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , bool final = false){
         ocp.subject_to(u->U(all, k) <= w_bound);
         ocp.subject_to(u->U(all, k) >= -w_bound);
         ocp.subject_to(u->U(0,k) * ( 1 + x->X(2, k)*x->X(2,k)) <= v_bound);
-        ocp.subject_to(u->U(0,k) * ( 1 + x->X(2, k)*x->X(2,k)) >= -v_bound);
+        ocp.subject_to(u->U(0,k) * ( 1 + x->X(2, k)*x->X(2,k)) >= 0);
     }
     // 1.7 - Boundary Constraints
     ocp.subject_to( x->X(all, 0 ) - x0 == 0);
-    //ocp.subject_to( u->U(all, 0 ) - u0 == 0);
+    ocp.subject_to( u->U(all, 0 ) - u0 == 0);
 
     // 2 - Transcription Methods
     // 2.2 - Direct Global Collocation Multiple-shooting LGL
@@ -117,9 +117,9 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , bool final = false){
     // cost = cost + mtimes(transpose(x->X(all, N ) - xf),(x->X(all, N ) - xf));
 
     // Second Part
-    int n2 = 4;
+    int n2 = 3;
     double T2 = (Tf-T);
-    int N2 = 5;
+    int N2 = N;
 
     MX xend, uend, x_plot1;
     x_plot1 = lgl_ms.getStates();
@@ -130,9 +130,9 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , bool final = false){
             ocp.subject_to(uend(all, k) <= u_bound);
             ocp.subject_to(uend(all, k) >= -u_bound);
         }
-        for (int k = 0; k < N2; ++k) {
-            ocp.subject_to(xend(all, k) >= 0);
-        }
+//        for (int k = 0; k < N2; ++k) {
+//            ocp.subject_to(xend(all, k) >= 0);
+//        }
 
         SX l2 = (u->v_ode - v_std) * (u->v_ode - v_std) + u->w_ode * u->w_ode;
 /*    SX l2 = (x->x_ode-xf(0).scalar())*(x->x_ode-xf(0).scalar())
@@ -146,6 +146,7 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , bool final = false){
 
         // Patch condition
         ocp.subject_to(xend(all, 0) - x->X(all, N) == 0);
+        ocp.subject_to(u->U(1,u->U.size2()-1) == 0);
         // End goal
         //ocp.subject_to( xend(all, N2) - xf == 0 );
 
@@ -156,30 +157,35 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , bool final = false){
             //cost = cost + mtimes(transpose(u->U(all, k + 1) - u->U(all, k)), u->U(all, k + 1) - u->U(all, k));
             //cost = cost + sum1(sum2(u->U(all, k+1) -  u->U(all, k)));
             //cost = cost + mtimes(transpose(x->X(all, k ) - xf),(x->X(all, k ) - xf));
+            cost = cost + mtimes(transpose(x->X(Slice(0,2), k) - DM({xf[0],xf[1]}) ), (x->X(Slice(0,2), k) - DM({xf[0],xf[1]})));
         }
-        cost = cost + mtimes(transpose(x->X(all, x->X.size2()-1) - xf), (x->X(all, x->X.size2()-1) - xf));
+        cost = cost + mtimes(transpose(x->X(Slice(0,2), x->X.size2()-1) - DM({xf[0],xf[1]})), (x->X(Slice(0,2), x->X.size2()-1) - DM({xf[0],xf[1]}) ));
+        //cost = cost + mtimes(transpose(x->X(all, x->X.size2()-1) - xf), (x->X(all, x->X.size2()-1) - xf ));
         for (int k = 0; k < xend.size2() - 1; k++) {
             //cost2 = cost2 + mtimes(transpose(uend(all, k + 1) - uend(all, k)), uend(all, k + 1) - uend(all, k));
             //cost2 = cost2 + sum1(sum2(uend(all, k+1) -  uend(all, k)));
-            cost2 = cost2 + mtimes(transpose(xend(all, k) - xf), (xend(all, k) - xf));
+            cost2 = cost2 + mtimes(transpose(xend(Slice(0,2), k) - DM({xf[0],xf[1]}) ), (xend(Slice(0,2), k) - DM({xf[0],xf[1]})));
+            //cost2 = cost2 + mtimes(transpose(xend(all, k) - xf ), (xend( all, k) - xf));
         }
         auto slicexy = Slice(0, 2);
-        cost2 = cost2 + mtimes(transpose(xend(all, xend.size2()-1) - xf), (xend(all, xend.size2()-1) - xf));
+        cost2 = cost2 + mtimes(transpose(xend(Slice(0,2),xend.size2()-1) - DM({xf[0],xf[1]}) ), (xend(Slice(0,2), xend.size2()-1) - DM({xf[0],xf[1]})));
+        //cost2 = cost2 + mtimes(transpose(xend(all, xend.size2()-1) - xf), (xend(all, xend.size2()-1) - xf));
         //ocp.minimize((T*T)*cost+(T2*T2)*cost2);
-        ocp.minimize((T) * cost + (T2) * cost2);
+        ocp.minimize( T*cost +  T2*cost2);
     } else{ // Final Trajectory
         //ocp.subject_to(x->X(0, x->X.size2()-1) - xf[0]== 0);
         //ocp.subject_to(x->X(2, x->X.size2()-1) - xf[2] <=  0.1);
         //ocp.subject_to(x->X(2, x->X.size2()-1) - xf[2] >=  0.1);
         //ocp.subject_to(x->X(1, x->X.size2()-1) - xf[1] <=  0.1);
         //ocp.subject_to(x->X(1, x->X.size2()-1) - xf[1] >=  0.1);
-        ocp.subject_to(mtimes(transpose(x->X(all, x->X.size2()-1) - xf), (x->X(all, x->X.size2()-1) - xf)) <= 0.1);
+        //ocp.subject_to(mtimes(transpose(x->X(all, x->X.size2()-1) - xf), (x->X(all, x->X.size2()-1) - xf)) <= 0.1);
         for (int k = 0; k < x->X.size2() - 1; k++) {
             //cost = cost + mtimes(transpose(u->U(all, k + 1) - u->U(all, k)), u->U(all, k + 1) - u->U(all, k));
             //cost = cost + sum1(sum2(u->U(all, k+1) -  u->U(all, k)));
             //cost = cost + mtimes(transpose(x->X(all, k ) - xf),(x->X(all, k ) - xf));
+            cost = cost + mtimes(transpose(x->X(Slice(0,2), k ) - DM({xf[0],xf[1]})),(x->X(Slice(0,2), k ) - DM({xf[0],xf[1]})));
         }
-        cost = cost + mtimes(transpose(x->X(all, x->X.size2()-1) - xf), (x->X(all, x->X.size2()-1) - xf));
+        cost = cost + x->X.size2()*mtimes(transpose(x->X(all, x->X.size2()-1) - xf), (x->X(all, x->X.size2()-1) - xf));
         ocp.minimize(cost );
     }
 
@@ -215,6 +221,10 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , bool final = false){
 
     //plotter.plot_path_heading(Xsol(0,all), Xsol(1,all), Xsol(2, all));
 
+    // Trajectory solution
+    std::cout << Xsol << std::endl;
+    std::cout << Usol << std::endl;
+
     auto N_ = Xsol.size2();
     xf_new.push_back(Xsol(0, N_-1).scalar());
     xf_new.push_back(Xsol(1, N_-1).scalar());
@@ -222,33 +232,69 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , bool final = false){
 
 }
 
+void rh_full(std::vector<double> x0, std::vector<double> xf){
+    double T_prev, T_curr, d_prev, d_curr;
+    double v_prev = v_std, v_curr, v_avg;
+    std::vector<double> xf_new, uf_new;
+    std::vector<double> xf_prev = x0, uf_prev = { 0.0, 0.0 };
+    bool first = true;
+    while(true) {
+        d_curr = estimate_distance(xf_prev, xf);
+        if(first){
+            first = false;
+            T_curr = estimate_T(d_curr, v_std);
+        } else{
+            v_prev = d_prev/T_prev;
+            v_curr = (d_prev-d_curr)/T1;
+            v_avg = 0.5*v_prev + 0.5*v_curr;
+            T_curr = d_curr / v_avg;
+        }
+
+        if(T_curr < T1) break; // final trajectory
+        xf_new.clear(); uf_new.clear();
+        rh(xf_prev, uf_prev, xf, T_curr, xf_new, uf_new);
+
+        d_prev = d_curr;
+        T_prev = T_curr;
+        xf_prev = xf_new;
+        uf_prev = uf_new;
+    }
+    // Final trajectory
+    rh(xf_prev, uf_prev, xf, T_curr, xf_new, uf_new, true);
+
+}
+
 
 int main() {
     double v_std = 0.5;
-    DM xf = DM::vertcat({ 1, 20, tan(0.9*M_PI/2)});
-    DM x0 = DM::vertcat({ 1, 1, tan(0.9*M_PI/2)});
+    DM xf = DM::vertcat({ 100, 100, tan(0.9*M_PI/2)});
+    DM x0 = DM::vertcat({ 10, 10, tan(0.9*M_PI/2)});
+
+    rh_full( x0.get_elements(), xf.get_elements());
 
     // Iter 1
-    std::vector<double> xf_new, uf_new;
-    auto d1 = estimate_distance(x0.get_elements(), xf.get_elements());
-    auto T_total_1 = estimate_T(d1, v_std);
-    rh(x0.get_elements(), {0.0,0.0},xf.get_elements(), T_total_1, xf_new, uf_new );
-
-    // Iter 2
-    std::vector<double> xf_new2, uf_new2;
-    auto d2 = estimate_distance(xf_new, xf.get_elements());
-    auto v_1 = d1/T_total_1;
-    auto v_2 = (d1 - d2)/T1;
-    auto v_avg = 0.5*v_1 + 0.5*v_2;
-    auto T_total_2 = d2 / v_avg;
-    rh(xf_new, uf_new,xf.get_elements(), T_total_2, xf_new2, uf_new2 );
-
-    // Iter 3
-    std::vector<double> xf_new3, uf_new3;
-    auto d3  = estimate_distance(xf_new2, xf.get_elements());
-    auto v_3 = (d2 - d3)/T1;
-    v_avg = 0.5*v_2 + 0.5*v_3;
-    auto T_total_3 = d3 / v_avg;
-    rh(xf_new2, uf_new2,xf.get_elements(), T_total_3, xf_new3, uf_new3 , true );
-    return 0;
+//    std::vector<double> xf_new, uf_new;
+//    auto d1 = estimate_distance(x0.get_elements(), xf.get_elements());
+//    auto T_total_1 = estimate_T(d1, v_std);
+//    rh(x0.get_elements(), {0.0,0.0},xf.get_elements(), T_total_1, xf_new, uf_new );
+//
+//    // Iter 2
+//    std::vector<double> xf_new2, uf_new2;
+//    auto d2 = estimate_distance(xf_new, xf.get_elements());
+//    auto v_1 = d1/T_total_1;
+//    auto v_2 = (d1 - d2)/T1;
+//    auto v_avg = 0.5*v_1 + 0.5*v_2;
+//    auto T_total_2 = d2 / v_avg;
+//    rh(xf_new, uf_new,xf.get_elements(), T_total_2, xf_new2, uf_new2 );
+//
+//    // Iter 3
+//    std::vector<double> xf_new3, uf_new3;
+//    auto d3  = estimate_distance(xf_new2, xf.get_elements());
+//    auto v_3 = (d2 - d3)/T1;
+//    v_avg = 0.5*v_2 + 0.5*v_3;
+//    auto T_total_3 = d3 / v_avg;
+//    rh(xf_new2, uf_new2,xf.get_elements(), T_total_3, xf_new3, uf_new3 , true );
+//    return 0;
 }
+
+

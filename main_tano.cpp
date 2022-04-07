@@ -13,12 +13,12 @@ int main() {
 
     // 1.1 - Params
     int n = 3;
-    double T = 10;
+    double T = 40;
     int N = 20; //3*T for RK4
     double L = 0.2;
     casadi::Opti ocp;
-    DM x0 = DM::vertcat({ 2 , 2, tan(-135 /2) });
-    DM xf = DM::vertcat({ 1, 1, tan(-135 /2)});
+    DM x0 = DM::vertcat({ 1 , 1, tan( 0.9*M_PI /2) });
+    DM xf = DM::vertcat({ 10, 10, tan(1.1*M_PI /2)});
     Slice all;
 
     // 1.2 - State: SE2
