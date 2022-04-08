@@ -25,8 +25,8 @@ double estimate_distance( std::vector<double> x0, std::vector<double> xf){
 }
 
 double estimate_T(double d, double v_std){
-    double beta = 1.0;
-    return beta * d / v_max;
+    double beta = 1;
+    return beta * d / v_std;
 }
 
 double estimate_T1(int  N, double L, double v_max){
@@ -68,8 +68,8 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , bool final = false){
     double T;
     int N;
     if(final){
-        T = std::max(2*Tf, 2.0);
-        N = std::max(estimate_N(T,L, v_max), 3.0);
+        T = T1; //std::max(2*Tf, 2.0);
+        N = N_init; //std::max(estimate_N(T,L, v_max), 3.0);
     } else{
         T = T1;
         N = N_init;
@@ -90,7 +90,7 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , bool final = false){
 
     // 1.5 - Cost
     SX l = (u->v_ode-v_std)*(u->v_ode-v_std) + u->w_ode*u->w_ode;
-    auto J = Function("l", {x->X_ode(), u->U_ode()}, {l});
+    auto J = Function("l", {x->X_ode(), u->U_ode()}, {T*l});
 
     // 1.6 - Bounds on controls
     double v_bound = v_max;
@@ -118,7 +118,7 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , bool final = false){
 
     // Second Part
     int n2 = 3;
-    double T2 = (Tf-T);
+    double T2 = Tf-T;
     int N2 = N;
 
     MX xend, uend, x_plot1;
@@ -137,7 +137,7 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , bool final = false){
         SX l2 = (u->v_ode - v_std) * (u->v_ode - v_std) + u->w_ode * u->w_ode;
 /*    SX l2 = (x->x_ode-xf(0).scalar())*(x->x_ode-xf(0).scalar())
             + (x->y_ode-xf(1).scalar())*(x->y_ode-xf(1).scalar());*/
-        auto J2 = Function("l", {x->X_ode(), u->U_ode()}, {l2});
+        auto J2 = Function("l", {x->X_ode(), u->U_ode()}, {T2*l2});
         LGLms lgl_ms2 = LGLms(xend, uend, N2, T2, n2, f, J2, ocp);
         MX cost2 = lgl_ms2.integrated_cost(0, T2, N2);
         for (auto g_i: lgl_ms2.g) {
@@ -171,14 +171,15 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , bool final = false){
         cost2 = cost2 + mtimes(transpose(xend(Slice(0,2),xend.size2()-1) - DM({xf[0],xf[1]}) ), (xend(Slice(0,2), xend.size2()-1) - DM({xf[0],xf[1]})));
         //cost2 = cost2 + mtimes(transpose(xend(all, xend.size2()-1) - xf), (xend(all, xend.size2()-1) - xf));
         //ocp.minimize((T*T)*cost+(T2*T2)*cost2);
-        ocp.minimize( T*cost +  T2*cost2);
+        ocp.minimize( cost +  cost2);
     } else{ // Final Trajectory
         //ocp.subject_to(x->X(0, x->X.size2()-1) - xf[0]== 0);
         //ocp.subject_to(x->X(2, x->X.size2()-1) - xf[2] <=  0.1);
         //ocp.subject_to(x->X(2, x->X.size2()-1) - xf[2] >=  0.1);
         //ocp.subject_to(x->X(1, x->X.size2()-1) - xf[1] <=  0.1);
         //ocp.subject_to(x->X(1, x->X.size2()-1) - xf[1] >=  0.1);
-        //ocp.subject_to(mtimes(transpose(x->X(all, x->X.size2()-1) - xf), (x->X(all, x->X.size2()-1) - xf)) <= 0.1);
+        //ocp.subject_to(mtimes(transpose(x->X(all, x->X.size2()-1) - xf), (x->X(all, x->X.size2()-1) - xf)) <= 0.5);
+        ocp.subject_to( mtimes(transpose(x->X(Slice(0,2), x->X.size2()-1) - DM({xf[0],xf[1]})), (x->X(Slice(0,2), x->X.size2()-1) - DM({xf[0],xf[1]}) )) <= 0.05 );
         for (int k = 0; k < x->X.size2() - 1; k++) {
             //cost = cost + mtimes(transpose(u->U(all, k + 1) - u->U(all, k)), u->U(all, k + 1) - u->U(all, k));
             //cost = cost + sum1(sum2(u->U(all, k+1) -  u->U(all, k)));
@@ -260,14 +261,12 @@ void rh_full(std::vector<double> x0, std::vector<double> xf){
         uf_prev = uf_new;
     }
     // Final trajectory
-    rh(xf_prev, uf_prev, xf, T_curr, xf_new, uf_new, true);
-
+    rh(xf_prev, uf_prev, xf, T1, xf_new, uf_new, true);
 }
 
 
 int main() {
-    double v_std = 0.5;
-    DM xf = DM::vertcat({ 100, 100, tan(0.9*M_PI/2)});
+    DM xf = DM::vertcat({ 40, 40, tan(0.9*M_PI/2)});
     DM x0 = DM::vertcat({ 10, 10, tan(0.9*M_PI/2)});
 
     rh_full( x0.get_elements(), xf.get_elements());
