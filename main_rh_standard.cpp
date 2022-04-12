@@ -89,8 +89,8 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , int final = 0){
 
     // 1.4 - Dynamics Model
     SX X_dot = SX::vertcat(
-            {u->v_ode *(1 - x->o_ode*x->o_ode),
-             u->v_ode * (2 * x->o_ode),
+            {u->v_ode *(1 - x->o_ode*x->o_ode)/(1 + x->o_ode*x->o_ode),
+             u->v_ode * (2 * x->o_ode)/(1 + x->o_ode*x->o_ode),
              u->w_ode});
     auto f = Function("f", {x->X_ode(), u->U_ode()}, {X_dot});
 
@@ -114,8 +114,10 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , int final = 0){
         ocp.subject_to(u->U(1, k) >= -w_bound);
         //ocp.subject_to(2*u->U(1,k) - (1 + x->X(2,k)*x->X(2,k))*(T)*w_bound < 0);
         //ocp.subject_to(-2*u->U(1,k) + (1 + x->X(2,k)*x->X(2,k))*(T)*(-w_bound) < 0);
-        ocp.subject_to(u->U(0,k) * ( 1 + x->X(2, k)*x->X(2,k)) <= v_bound);
-        ocp.subject_to(u->U(0,k) * ( 1 + x->X(2, k)*x->X(2,k)) >= -0.5*v_bound);
+        ocp.subject_to(u->U(0,k) <= v_bound);
+        ocp.subject_to(u->U(0,k) >= -0.5*v_bound);
+        //ocp.subject_to(u->U(0,k) * ( 1 + x->X(2, k)*x->X(2,k)) <= v_bound);
+        //ocp.subject_to(u->U(0,k) * ( 1 + x->X(2, k)*x->X(2,k)) >= -0.5*v_bound);
     }
     // 1.7 - Boundary Constraints
     ocp.subject_to( x->X(all, 0 ) - x0 == 0);
@@ -326,8 +328,8 @@ void rh_full(std::vector<double> x0, std::vector<double> xf){
 
 
 int main() {
-    DM x0 = DM::vertcat({ 10, 10, tan(-0.5*M_PI/2)});
-    DM xf = DM::vertcat({ 10, 20, tan(-0.5*M_PI/2)});
+    DM x0 = DM::vertcat({ 10, 10, tan(0*M_PI/2)});
+    DM xf = DM::vertcat({ 100, 100, tan(-0.5*M_PI/2)});
 
     rh_full( x0.get_elements(), xf.get_elements());
 
