@@ -102,7 +102,7 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , int final = 0){
         J = Function("l", {x->X_ode(), u->U_ode()}, {l});
     } else{
         l = (u->v_ode-v_std)*(u->v_ode-v_std) + u->w_ode*u->w_ode;
-        J = Function("l", {x->X_ode(), u->U_ode()}, {Tf*l});
+        J = Function("l", {x->X_ode(), u->U_ode()}, {l});
     }
 
     // 1.6 - Bounds on controls
@@ -177,12 +177,12 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , int final = 0){
             //cost = cost + mtimes(transpose(x->X(all, k ) - xf),(x->X(all, k ) - xf));
             //cost = cost + mtimes(transpose(x->X(Slice(0,2), k) - DM({xf[0],xf[1]}) ), (x->X(Slice(0,2), k) - DM({xf[0],xf[1]})));
         }
-        cost = cost + mtimes(transpose(x->X(Slice(0,2), x->X.size2()-1) - DM({xf[0],xf[1]})), (x->X(Slice(0,2), x->X.size2()-1) - DM({xf[0],xf[1]}) ));
+        cost = cost + (1/Tf)*mtimes(transpose(x->X(Slice(0,2), x->X.size2()-1) - DM({xf[0],xf[1]})), (x->X(Slice(0,2), x->X.size2()-1) - DM({xf[0],xf[1]}) ));
         double o_std = atan2(xf[1]-x0[1], xf[0] - x0[0]);
         double d = std::sqrt((xf[1]-x0[1])*(xf[1]-x0[1]) +  (xf[0]-x0[0]) *(xf[0]-x0[0])) - v_max*T;
         double tg2_std = sin(o_std)/(1+cos(o_std));
         if(d > 0) {
-            cost = cost + d*mtimes(transpose(x->X(2, x->X.size2() - 1) - tg2_std), (x->X(2, x->X.size2() - 1) - tg2_std));
+            cost = cost + (1/Tf)*d*mtimes(transpose(x->X(2, x->X.size2() - 1) - tg2_std), (x->X(2, x->X.size2() - 1) - tg2_std));
         }
         /*for (int k = 0; k < xend.size2() - 1; k++) {
             //cost2 = cost2 + mtimes(transpose(uend(all, k + 1) - uend(all, k)), uend(all, k + 1) - uend(all, k));
