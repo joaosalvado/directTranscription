@@ -122,7 +122,7 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , int final = 0){
     // 1.7 - Boundary Constraints
     ocp.subject_to( x->X(all, 0 ) - x0 == 0);
     //ocp.subject_to( u->U(1, 0 ) - u0[0] == 0);
-    ocp.subject_to(u->U(1,u->U.size2()-1) == 0);
+    //ocp.subject_to(u->U(1,u->U.size2()-1) == 0);
 
     // 2 - Transcription Methods
     // 2.2 - Direct Global Collocation Multiple-shooting LGL
@@ -216,7 +216,7 @@ std::vector<double> &xf_new, std::vector<double> &u0_new , int final = 0){
         cost = cost + mtimes(transpose(x->X(all, x->X.size2()-1) - xf), (x->X(all, x->X.size2()-1) - xf));
         double o_std = xf[2];
         double tg2_std = xf[2];//sin(o_std)/(1+cos(o_std));
-        cost = cost + mtimes(transpose(x->X(2, x->X.size2()-1) - tg2_std), (x->X(2, x->X.size2()-1) - tg2_std ));
+        //cost = cost + mtimes(transpose(x->X(2, x->X.size2()-1) - tg2_std), (x->X(2, x->X.size2()-1) - tg2_std ));
         ocp.minimize(cost );
     }
 
@@ -329,7 +329,7 @@ void rh_full(std::vector<double> x0, std::vector<double> xf){
 
 int main() {
     DM x0 = DM::vertcat({ 10, 10, tan(0*M_PI/2)});
-    DM xf = DM::vertcat({ 100, 100, tan(-0.5*M_PI/2)});
+    DM xf = DM::vertcat({ 30, 30, tan(-0.5*M_PI/2)});
 
     rh_full( x0.get_elements(), xf.get_elements());
 
