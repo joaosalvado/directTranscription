@@ -334,7 +334,7 @@ int main() {
     rh_full( x0.get_elements(), xf.get_elements());
 
     // Iter 1
-//    std::vector<double> xf_new, uf_new;
+    //   std::vector<double> xf_new, uf_new;
 //    auto d1 = estimate_distance(x0.get_elements(), xf.get_elements());
 //    auto T_total_1 = estimate_T(d1, v_std);
 //    rh(x0.get_elements(), {0.0,0.0},xf.get_elements(), T_total_1, xf_new, uf_new );
